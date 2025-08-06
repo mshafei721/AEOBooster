@@ -3,6 +3,32 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import InputForm from '../InputForm';
+import { BUSINESS_CATEGORIES } from '../../constants/businessCategories';
+
+// Mock the UI components
+jest.mock('../UI/LoadingSpinner', () => {
+  return function MockLoadingSpinner({ text }) {
+    return <div data-testid="loading-spinner">{text}</div>;
+  };
+});
+
+jest.mock('../UI/ErrorMessage', () => {
+  return function MockErrorMessage({ title, message, onRetry }) {
+    return (
+      <div data-testid="error-message">
+        <h3>{title}</h3>
+        <p>{message}</p>
+        {onRetry && <button onClick={onRetry}>Retry</button>}
+      </div>
+    );
+  };
+});
+
+jest.mock('../UI/ProgressIndicator', () => {
+  return function MockProgressIndicator({ currentStep }) {
+    return <div data-testid="progress-indicator">Step {currentStep}</div>;
+  };
+});
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -101,9 +127,6 @@ describe('InputForm', () => {
       json: async () => ({ project_id: 'test-project-id', status: 'created' })
     });
     
-    // Mock alert
-    window.alert = jest.fn();
-    
     render(<InputForm />);
     
     const urlInput = screen.getByPlaceholderText('https://example.com');
@@ -113,6 +136,7 @@ describe('InputForm', () => {
     await user.click(submitButton);
     
     // Should show loading state
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
     expect(screen.getByText('Analyzing Website...')).toBeInTheDocument();
     
     await waitFor(() => {
@@ -128,8 +152,11 @@ describe('InputForm', () => {
       });
     });
     
+    // Should show success screen
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Project created successfully! Project ID: test-project-id');
+      expect(screen.getByText('Analysis Started!')).toBeInTheDocument();
+      expect(screen.getByText('test-project-id')).toBeInTheDocument();
+      expect(screen.getByTestId('progress-indicator')).toBeInTheDocument();
     });
   });
 
@@ -151,7 +178,8 @@ describe('InputForm', () => {
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(screen.getByText('Failed to create project. Please try again.')).toBeInTheDocument();
+      expect(screen.getByTestId('error-message')).toBeInTheDocument();
+      expect(screen.getByText('Submission Failed')).toBeInTheDocument();
     });
   });
 
@@ -170,8 +198,9 @@ describe('InputForm', () => {
     const urlInput = screen.getByPlaceholderText('https://example.com');
     await user.type(urlInput, 'example.com');
     
-    const categoryInput = screen.getByPlaceholderText('e.g., E-commerce, SaaS, Consulting');
-    await user.type(categoryInput, 'E-commerce');
+    // Select from dropdown instead of typing
+    const categorySelect = screen.getByLabelText(/Business Category/);
+    await user.selectOptions(categorySelect, 'e-commerce');
     
     const submitButton = screen.getByText('Start AEO Analysis');
     await user.click(submitButton);
@@ -184,9 +213,59 @@ describe('InputForm', () => {
         },
         body: JSON.stringify({
           site_url: 'https://example.com',
-          business_category: 'E-commerce'
+          business_category: 'e-commerce'
         }),
       });
+    });
+  });
+
+  test('can skip business category selection', async () => {
+    const user = userEvent.setup();
+    
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ project_id: 'test-project-id', status: 'created' })
+    });
+    
+    window.alert = jest.fn();
+    
+    render(<InputForm />);
+    
+    const urlInput = screen.getByPlaceholderText('https://example.com');
+    await user.type(urlInput, 'example.com');
+    
+    // Don't select any category (default is empty)
+    const categorySelect = screen.getByLabelText(/Business Category/);
+    expect(categorySelect.value).toBe('');
+    
+    const submitButton = screen.getByText('Start AEO Analysis');
+    await user.click(submitButton);
+    
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          site_url: 'https://example.com',
+          business_category: undefined
+        }),
+      });
+    });
+  });
+
+  test('shows all business categories in dropdown', () => {
+    render(<InputForm />);
+    
+    const categorySelect = screen.getByLabelText(/Business Category/);
+    
+    // Check that skip option exists
+    expect(screen.getByText('Skip this step')).toBeInTheDocument();
+    
+    // Check that all business categories are present
+    BUSINESS_CATEGORIES.forEach(category => {
+      expect(screen.getByText(category.label)).toBeInTheDocument();
     });
   });
 

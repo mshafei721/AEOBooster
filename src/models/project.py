@@ -27,3 +27,7 @@ class Project(Base):
     
     # Relationship to user
     user = relationship("User", back_populates="projects")
+    
+    # Relationships to crawled content (will be populated by crawled_content.py)
+    crawl_jobs = relationship("CrawlJob", back_populates="project")
+    crawled_pages = relationship("CrawledPage", back_populates="project")

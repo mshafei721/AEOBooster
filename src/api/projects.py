@@ -7,12 +7,20 @@ from urllib.parse import urlparse
 
 from ..models.database import get_db
 from ..models.project import Project, User
+from ..constants.business_categories import BUSINESS_CATEGORIES, is_valid_business_category
 
 router = APIRouter()
 
 class ProjectCreate(BaseModel):
     site_url: str
     business_category: Optional[str] = None
+    
+    @field_validator('business_category')
+    @classmethod
+    def validate_business_category(cls, v):
+        if v and not is_valid_business_category(v):
+            raise ValueError(f'Invalid business category. Must be one of: {", ".join(BUSINESS_CATEGORIES)}')
+        return v
     
     @field_validator('site_url')
     @classmethod

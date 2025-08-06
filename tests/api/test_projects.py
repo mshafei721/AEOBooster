@@ -8,6 +8,7 @@ import os
 from main import app
 from src.models.database import get_db, Base
 from src.models.project import User, Project
+from src.constants.business_categories import BUSINESS_CATEGORIES
 
 # Create test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -64,7 +65,7 @@ class TestProjectsAPI:
             "/api/projects",
             json={
                 "site_url": "https://example.com",
-                "business_category": "E-commerce"
+                "business_category": "e-commerce"
             }
         )
         
@@ -72,6 +73,42 @@ class TestProjectsAPI:
         data = response.json()
         assert "project_id" in data
         assert data["status"] == "created"
+    
+    def test_create_project_with_invalid_business_category(self):
+        """Test creating a project with invalid business category"""
+        response = client.post(
+            "/api/projects",
+            json={
+                "site_url": "https://example.com",
+                "business_category": "invalid-category"
+            }
+        )
+        
+        assert response.status_code == 422  # Validation error
+    
+    def test_create_project_without_business_category(self):
+        """Test creating a project without business category (optional field)"""
+        response = client.post(
+            "/api/projects",
+            json={"site_url": "https://example.com"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "project_id" in data
+        assert data["status"] == "created"
+    
+    def test_all_business_categories_valid(self):
+        """Test that all predefined business categories are accepted"""
+        for category in BUSINESS_CATEGORIES:
+            response = client.post(
+                "/api/projects",
+                json={
+                    "site_url": f"https://example-{category}.com",
+                    "business_category": category
+                }
+            )
+            assert response.status_code == 200, f"Failed for category: {category}"
     
     def test_create_project_invalid_url(self):
         """Test creating a project with invalid URL"""
@@ -176,7 +213,7 @@ def test_full_project_creation_flow():
     # Create project
     create_data = {
         "site_url": "example.com",
-        "business_category": "Technology"
+        "business_category": "saas"
     }
     
     create_response = client.post("/api/projects", json=create_data)
@@ -192,4 +229,4 @@ def test_full_project_creation_flow():
     retrieved_data = get_response.json()
     assert retrieved_data["project_id"] == project_id
     assert retrieved_data["site_url"] == "https://example.com"  # Should have protocol added
-    assert retrieved_data["business_category"] == "Technology"
+    assert retrieved_data["business_category"] == "saas"

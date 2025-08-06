@@ -1,3 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom utilities for AEO Booster */
+@layer utilities {
+  .transition-all-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+}
+
+/* Primary color definitions */
+:root {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+}
