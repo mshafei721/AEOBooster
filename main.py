@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.projects import router as projects_router
 from src.api.crawl import router as crawl_router
+from src.api.entities import router as entities_router
 
 app = FastAPI(title="AEO Booster API", version="1.0.0")
 
@@ -17,6 +18,7 @@ app.add_middleware(
 # Include routers
 app.include_router(projects_router, prefix="/api")
 app.include_router(crawl_router, prefix="/api")
+app.include_router(entities_router, prefix="/api")
 
 @app.get("/")
 async def root():
